@@ -55,10 +55,12 @@ Or equivalently on the host: `apk add libstdc++`.
 
 ## How it works
 
-**Build time.** `clp-s` is compiled inside a Docker container that matches the
-target platform and libc variant (glibc or musl). The resulting binary and its
-shared library dependencies are bundled into a tarball, base64-encoded, and
-written into a generated Go source file that is compiled into the library.
+**Build time.** Both `go generate` and Bazel compile `clp-s` inside a Docker
+container that matches the target platform and libc variant (glibc or musl).
+The resulting binary and its shared library dependencies are bundled into a
+tarball, base64-encoded, and written into a generated Go source file that is
+compiled into the library. With `go generate`, the tarball is discarded after
+encoding; with Bazel, the whole process happens inside a genrule sandbox.
 
 **Runtime.** The first call to `clp.Run()` decodes the embedded tarball, writes
 it to a temporary directory with permissions preserved from the archive, and
