@@ -44,8 +44,9 @@ normal exit, call `clp.Cleanup()`.
 
 ### Alpine Linux
 
-The musl variant requires the C++ runtime, which Alpine does not install by
-default. Add it once to your image:
+The musl variant is built with Bazel (`--define libc=musl`) and requires the
+C++ runtime, which Alpine does not install by default. Add it once to your
+image:
 
 ```dockerfile
 RUN apk add --no-cache libstdc++
@@ -118,9 +119,9 @@ bazel build //:clp --platforms=@rules_go//go/toolchain:linux_arm64 --define libc
 
 ## Configuration — `clp-core.sh`
 
-`clp-core.sh` controls which CLP commit to build and which Docker image to use
-for each platform and libc combination. It is a plain shell file — no external
-parser required.
+`clp-core.sh` controls which version of CLP to build and which Docker image to
+use for each platform and libc combination. It is a plain shell file — no
+external parser required.
 
 ```bash
 CLP_REPO="y-scope/clp"
@@ -155,6 +156,10 @@ A minimal smoke-test binary lives under `cmd/testrun`. It calls
 can be extracted and executed:
 
 ```bash
+# via go generate
+go run ./cmd/testrun
+
+# via Bazel
 bazel run //cmd/testrun
 ```
 
@@ -222,10 +227,10 @@ auditable source within their own infrastructure, so that:
 - build logs are retained in the organisation's own CI systems, and
 - no opaque binaries from external distribution channels are introduced.
 
-This library satisfies those requirements. `clp-s` is compiled from a pinned
-commit of the public [y-scope/clp](https://github.com/y-scope/clp) repository,
-inside a Docker container whose image is specified in `clp-core.sh`, by the
-organisation's own CI pipeline. The resulting binary is embedded into the Go
+This library satisfies those requirements. `clp-s` is compiled from the ref
+specified in `clp-core.sh` of the public [y-scope/clp](https://github.com/y-scope/clp)
+repository, inside a Docker container whose image is also specified in
+`clp-core.sh`, by the organisation's own CI pipeline. The resulting binary is embedded into the Go
 binary at compile time and ships as a single, self-contained artifact with a
 clear chain of custody from source to production.
 
@@ -248,7 +253,7 @@ Embedding pre-compiled artifacts in Go packages is an established pattern:
 
 | Property | Detail |
 |----------|--------|
-| **Provenance** | `clp-s` is built from the [y-scope/clp](https://github.com/y-scope/clp) public repository at the commit pinned in `clp-core.sh`. |
+| **Provenance** | `clp-s` is built from the [y-scope/clp](https://github.com/y-scope/clp) public repository at the ref specified in `clp-core.sh`. |
 | **Build environment** | Compiled inside Docker images published by the CLP team at `ghcr.io/y-scope/clp/`, pinned by tag in `clp-core.sh`. Organisations may substitute their own mirrored or internally built images. |
 | **No runtime network access** | The binary is inlined at build time. `clp.Run()` performs no network requests. |
 | **Extraction safety** | The tar extractor rejects path traversal (`../`), absolute paths, symlinks, and hardlinks. Files are created with the exact permissions recorded in the tarball. |
