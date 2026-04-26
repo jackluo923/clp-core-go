@@ -5,8 +5,8 @@ compression and search. It embeds the `clp-s` binary directly into the Go
 library, so consumers require no external installation or network access at
 runtime.
 
-> **Note:** The embedded binary files are not committed to `main` — they are
-> built from source at compile time. Two ways to build the library:
+> **Note:** The embedded binary files are gitignored and never committed —
+> they are built from source at compile time. Two ways to build the library:
 >
 > | Method | Command | Requires |
 > |--------|---------|----------|
@@ -84,7 +84,7 @@ embed_linux_amd64.go      # generated Go source
 ```
 
 The intermediate tarball is built in a temp directory and removed automatically.
-The generated file is listed in `.gitignore` to prevent accidental commits to `main`.
+The generated file is listed in `.gitignore` and should not be committed.
 
 ### Bazel
 
