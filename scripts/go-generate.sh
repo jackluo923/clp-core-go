@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 # Entry point for `go generate ./...`.
 # Builds clp-s for the current arch (glibc) and generates the embed Go file.
-# Requires Docker. The generated files are intentionally excluded from .gitignore
-# on main — they belong on the release branch only.
+# Requires Docker. The generated file is gitignored and should not be committed.
 #
 # Run from the repo root: go generate ./...
 
