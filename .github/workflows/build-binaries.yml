@@ -1,0 +1,69 @@
+name: Build CLP Binaries
+
+on:
+  workflow_dispatch:
+    inputs:
+      clp_ref:
+        description: 'CLP git ref (branch, tag, or commit). Overrides CLP_REF from clp-core.sh if set.'
+        required: false
+        default: ''
+      release_branch:
+        description: 'Branch to commit the generated embed files to'
+        required: true
+        default: 'release'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.release_branch }}
+
+      - name: Read config
+        id: config
+        env:
+          INPUT_CLP_REF: ${{ github.event.inputs.clp_ref }}
+        run: |
+          source clp-core.sh
+          echo "clp_ref=${INPUT_CLP_REF:-$CLP_REF}" >> "$GITHUB_OUTPUT"
+          echo "clp_repo=${CLP_REPO}" >> "$GITHUB_OUTPUT"
+
+      - name: Check out CLP source
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ steps.config.outputs.clp_repo }}
+          ref: ${{ steps.config.outputs.clp_ref }}
+          path: clp-source
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build tarballs (glibc, all arches)
+        run: |
+          ./scripts/build-tarball.sh \
+            --clp-repo ./clp-source \
+            --config clp-core.sh \
+            --output-dir ./dist \
+            --libc-filter glibc
+
+      - name: Generate embed files
+        run: |
+          ./scripts/generate-embeds.sh \
+            --dist-dir ./dist \
+            --out-dir .
+
+      - name: Commit and push
+        env:
+          RELEASE_BRANCH: ${{ github.event.inputs.release_branch }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # Force-add: these files are in .gitignore on main to prevent
+          # accidental commits, but the release branch intentionally tracks them.
+          git add -f embed_linux_amd64.go embed_linux_arm64.go
+          git diff --cached --quiet || git commit -m "chore: update embedded clp-s binaries"
+          git push origin "$RELEASE_BRANCH"

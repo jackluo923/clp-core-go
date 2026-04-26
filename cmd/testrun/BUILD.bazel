@@ -1,0 +1,9 @@
+load("@rules_go//go:def.bzl", "go_binary")
+
+go_binary(
+    name = "testrun",
+    srcs = ["main.go"],
+    importpath = "github.com/y-scope/clp-core-go/cmd/testrun",
+    pure = "on",
+    deps = ["//:clp"],
+)

@@ -1,0 +1,17 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "extract",
+    srcs = ["extract.go"],
+    importpath = "github.com/y-scope/clp-core-go/internal/extract",
+    # Public Bazel visibility is required so the top-level //:clp library can
+    # depend on this target. Go's internal/ import restriction still prevents
+    # external Go consumers from importing the package directly.
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "extract_test",
+    srcs = ["extract_test.go"],
+    embed = [":extract"],
+)

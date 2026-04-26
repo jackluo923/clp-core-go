@@ -1,0 +1,8 @@
+# Only scripts referenced by Bazel genrules need to be exported here.
+# generate-embeds.sh is called directly by the CI workflow, not by Bazel.
+exports_files([
+    "build-tarball-bazel.sh",
+    "build-tarball.sh",
+    "generate-embed-go.sh",
+    "go-generate.sh",
+])

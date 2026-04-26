@@ -1,0 +1,85 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+# Select musl variant with: bazel build --define libc=musl
+config_setting(
+    name = "musl_build",
+    values = {"define": "libc=musl"},
+)
+
+# --- glibc variant ------------------------------------------------------------
+
+genrule(
+    name = "generate_embed_glibc",
+    srcs = ["clp-core.sh"],
+    outs = ["embed_linux_host_glibc.go"],
+    cmd = """
+        case "$(TARGET_CPU)" in
+            k8)      GOARCH=amd64 ;;
+            aarch64) GOARCH=arm64 ;;
+            *)       echo "ERROR: Unsupported CPU $(TARGET_CPU) — set target via --platforms." >&2; exit 1 ;;
+        esac
+        TMP_OUT=$$(mktemp -d /tmp/bazel-clp.XXXXXX)
+        trap 'rm -rf "$$TMP_OUT"' EXIT
+        GOARCH=$$GOARCH $(location //scripts:build-tarball-bazel.sh) \\
+            --output-dir "$$TMP_OUT" \\
+            --libc glibc \\
+            --config "$(location clp-core.sh)"
+        $(location //scripts:generate-embed-go.sh) \\
+            --arch "$$GOARCH" \\
+            --output "$(location embed_linux_host_glibc.go)" \\
+            --tarball "$$TMP_OUT/clp-s_linux_$${GOARCH}.tar.gz"
+    """,
+    tools = [
+        "//scripts:build-tarball-bazel.sh",
+        "//scripts:build-tarball.sh",
+        "//scripts:generate-embed-go.sh",
+    ],
+    local = True,
+)
+
+# --- musl variant -------------------------------------------------------------
+
+genrule(
+    name = "generate_embed_musl",
+    srcs = ["clp-core.sh"],
+    outs = ["embed_linux_host_musl.go"],
+    cmd = """
+        case "$(TARGET_CPU)" in
+            k8)      GOARCH=amd64 ;;
+            aarch64) GOARCH=arm64 ;;
+            *)       echo "ERROR: Unsupported CPU $(TARGET_CPU) — set target via --platforms." >&2; exit 1 ;;
+        esac
+        TMP_OUT=$$(mktemp -d /tmp/bazel-clp.XXXXXX)
+        trap 'rm -rf "$$TMP_OUT"' EXIT
+        GOARCH=$$GOARCH $(location //scripts:build-tarball-bazel.sh) \\
+            --output-dir "$$TMP_OUT" \\
+            --libc musl \\
+            --config "$(location clp-core.sh)"
+        $(location //scripts:generate-embed-go.sh) \\
+            --arch "$$GOARCH" \\
+            --output "$(location embed_linux_host_musl.go)" \\
+            --tarball "$$TMP_OUT/clp-s_linux_$${GOARCH}_musl.tar.gz"
+    """,
+    tools = [
+        "//scripts:build-tarball-bazel.sh",
+        "//scripts:build-tarball.sh",
+        "//scripts:generate-embed-go.sh",
+    ],
+    local = True,
+)
+
+# --- Go library ---------------------------------------------------------------
+
+go_library(
+    name = "clp",
+    srcs = [
+        "clp.go",
+        "embed_linux_stub.go",
+    ] + select({
+        ":musl_build": [":generate_embed_musl"],
+        "//conditions:default": [":generate_embed_glibc"],
+    }),
+    importpath = "github.com/y-scope/clp-core-go",
+    visibility = ["//visibility:public"],
+    deps = ["//internal/extract:extract"],
+)
